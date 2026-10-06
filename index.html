@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teen Patti Score & Chip Tracker</title>
+  <meta name="description" content="Professional Teen Patti score and chip tracker for casual and tournament games. Real-time bankroll, pot tracking, blind/seen betting, and hand history.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation & Controls Bar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon">♠</div>
+        <div class="brand-text">
+          <h1>Teen Patti Tracker</h1>
+          <span class="brand-subtitle">Smart Scorekeeper & Chip Manager</span>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div class="status-badge hand-pill" id="handBadge">Hand #1</div>
+        <div class="status-badge round-pill" id="roundBadge">Round 1 / 3</div>
+        <div class="status-badge active-players-pill" id="activePlayersBadge">4 Players Active</div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnUndo" class="btn btn-secondary btn-icon" title="Undo last action">
+          <span class="icon">↺</span>
+          <span class="btn-text">Undo</span>
+        </button>
+        <button id="btnHistory" class="btn btn-secondary btn-icon" title="View hand log">
+          <span class="icon">📜</span>
+          <span class="btn-text">Log</span>
+        </button>
+        <button id="btnLeaderboard" class="btn btn-secondary btn-icon" title="Session Leaderboard">
+          <span class="icon">🏆</span>
+          <span class="btn-text">Scores</span>
+        </button>
+        <button id="btnSettings" class="btn btn-secondary btn-icon" title="Table Settings">
+          <span class="icon">⚙️</span>
+          <span class="btn-text">Settings</span>
+        </button>
+        <button id="btnResetGameHeader" class="btn btn-secondary btn-icon btn-reset-highlight" title="Reset Entire Game & Bankrolls">
+          <span class="icon">🔄</span>
+          <span class="btn-text">Reset Game</span>
+        </button>
+        <button id="btnSoundToggle" class="btn btn-secondary btn-icon" title="Toggle Sound">
+          <span class="icon" id="soundIcon">🔊</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Game Table Canvas -->
+    <main class="table-stage">
+      <div class="poker-table" id="pokerTable">
+        <!-- Table Rim & Felt Texture -->
+        <div class="table-rail"></div>
+        <div class="table-felt">
+          
+          <!-- Central Pot & Stake Display -->
+          <div class="table-center">
+            <div class="pot-container" id="potContainer">
+              <div class="pot-chip-stack" id="potChipStack">
+                <span class="chip-graphic chip-gold"></span>
+                <span class="chip-graphic chip-red"></span>
+                <span class="chip-graphic chip-blue"></span>
+              </div>
+              <div class="pot-label">MAIN POT</div>
+              <div class="pot-amount" id="potAmount">0</div>
+              <div class="pot-currency">CHIPS</div>
+            </div>
+
+            <div class="table-info-bar">
+              <div class="info-item">
+                <span class="info-label">Blind Stake</span>
+                <span class="info-val" id="currentBlindStake">5</span>
+              </div>
+              <div class="info-divider"></div>
+              <div class="info-item">
+                <span class="info-label">Chaal Stake</span>
+                <span class="info-val" id="currentChaalStake">10</span>
+              </div>
+              <div class="info-divider"></div>
+              <div class="info-item">
+                <span class="info-label">Boot / Ante</span>
+                <span class="info-val" id="tableBootAmount">5</span>
+              </div>
+            </div>
+
+            <div class="table-turn-banner" id="turnBanner">
+              <span class="turn-dot"></span>
+              <span class="turn-text" id="turnBannerText">Waiting to start hand...</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Player Pods (Injected via JS around table perimeter) -->
+          <div class="players-orbit" id="playersOrbit"></div>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Action Console Dock -->
+    <footer class="action-dock" id="actionDock">
+      <div class="dock-inner">
+        <!-- Turn Info -->
+        <div class="dock-player-info" id="dockPlayerInfo">
+          <div class="dock-player-avatar" id="dockPlayerAvatar">P1</div>
+          <div class="dock-player-details">
+            <div class="dock-player-name" id="dockPlayerName">Player 1</div>
+            <div class="dock-player-meta">
+              <span class="badge" id="dockPlayerStatus">Blind</span>
+              <span class="dock-player-chips" id="dockPlayerChips">Chips: 100</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Betting Controls -->
+        <div class="dock-controls" id="dockControls">
+          <!-- Fold Button -->
+          <button id="btnFold" class="btn btn-action btn-fold">
+            <span class="btn-top">PACK</span>
+            <span class="btn-sub">Fold Hand</span>
+          </button>
+
+          <!-- Toggle Seen / Blind Button -->
+          <button id="btnToggleSeen" class="btn btn-action btn-seen">
+            <span class="btn-top" id="btnToggleSeenTop">SEE CARDS</span>
+            <span class="btn-sub" id="btnToggleSeenSub">Switch to Seen</span>
+          </button>
+
+          <!-- Call / Chaal / Blind Button -->
+          <button id="btnCall" class="btn btn-action btn-call">
+            <span class="btn-top" id="btnCallTop">CHAAL</span>
+            <span class="btn-sub" id="btnCallSub">+10 Chips</span>
+          </button>
+
+          <!-- All-In Button (Normal Betting) -->
+          <button id="btnAllIn" class="btn btn-action btn-allin" title="Push your entire remaining bankroll">
+            <span class="btn-top">🔥 ALL IN</span>
+            <span class="btn-sub" id="btnAllInSub">Push Stack</span>
+          </button>
+
+          <!-- Call All-In Button (Only visible during All-In round) -->
+          <button id="btnCallAllIn" class="btn btn-action btn-call-allin" style="display: none;" title="Match the All-In bet">
+            <span class="btn-top">⚡ CALL ALL-IN</span>
+            <span class="btn-sub" id="btnCallAllInSub">+50 Chips</span>
+          </button>
+
+          <!-- Raise Group -->
+          <div class="raise-group">
+            <button id="btnRaiseQuick1" class="btn btn-chip-quick" data-multiplier="2">2X</button>
+            <button id="btnRaiseQuick2" class="btn btn-chip-quick" data-add="10">+10</button>
+            <button id="btnRaiseQuick3" class="btn btn-chip-quick" data-add="20">+20</button>
+            <button id="btnRaiseCustom" class="btn btn-action btn-raise">
+              <span class="btn-top">RAISE</span>
+              <span class="btn-sub" id="btnRaiseSub">Custom...</span>
+            </button>
+          </div>
+
+          <!-- Rebuy / Add Bankroll Group (displayed when chips < required call) -->
+          <div class="topup-action-group" id="topupActionGroup" style="display: none;">
+            <button id="btnQuickTopUp" class="btn btn-action btn-topup" title="Add 100 chips">
+              <span class="btn-top">+100 CHIPS</span>
+              <span class="btn-sub">Add Bankroll</span>
+            </button>
+            <button id="btnCustomTopUp" class="btn btn-action btn-topup-custom" title="Custom Top-Up">
+              <span class="btn-top">TOP UP...</span>
+              <span class="btn-sub">Custom Rebuy</span>
+            </button>
+          </div>
+
+          <!-- Show Button (active when <= 2 players or end of round 3) -->
+          <button id="btnShow" class="btn btn-action btn-show" disabled>
+            <span class="btn-top">SHOW</span>
+            <span class="btn-sub" id="btnShowSub">End Hand</span>
+          </button>
+        </div>
+
+        <!-- Pre-Hand Controls (when hand is not active) -->
+        <div class="dock-prehand" id="dockPrehand" style="display: none;">
+          <button id="btnDealNewHand" class="btn btn-primary btn-deal">
+            <span class="icon">🃏</span>
+            <span>COLLECT BOOT & DEAL HAND</span>
+          </button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Modals & Overlays -->
+
+    <!-- Add Bankroll / Top-Up Modal -->
+    <div class="modal-backdrop" id="topupModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>💰 Add Bankroll / Rebuy</h3>
+          <button class="modal-close" id="closeTopupModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc" id="topupDesc">
+            Add chips to your bankroll to continue calling and raising.
+          </p>
+          <div class="raise-slider-box">
+            <div class="raise-target-display">
+              <span class="raise-amount-large" id="topupAmountDisplay">100</span>
+              <span class="raise-unit">CHIPS</span>
+            </div>
+            <input type="number" id="topupNumberInput" min="100" step="10" value="100" class="topup-input">
+            <small class="field-hint">Default is 100 chips (Minimum: 100 chips).</small>
+          </div>
+          <div class="quick-preset-row" id="topupPresets">
+            <button class="btn btn-chip-quick" data-topup="100">+100 Chips</button>
+            <button class="btn btn-chip-quick" data-topup="200">+200 Chips</button>
+            <button class="btn btn-chip-quick" data-topup="300">+300 Chips</button>
+            <button class="btn btn-chip-quick" data-topup="500">+500 Chips</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelTopup">Cancel</button>
+          <button class="btn btn-primary" id="btnConfirmTopup">Add to Bankroll</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset Game Session Modal -->
+    <div class="modal-backdrop" id="resetModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>🔄 Reset Entire Game Session</h3>
+          <button class="modal-close" id="closeResetModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Start a fresh game session from scratch? All player bankrolls will be reset back to the starting amount (100 chips each), the hand counter will reset to <strong>Hand #1</strong>, and previous hand logs will be cleared.
+          </p>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="resetStartingChips">Starting Bankroll Per Player:</label>
+            <input type="number" id="resetStartingChips" min="10" max="10000" step="10" value="100">
+          </div>
+          <div class="form-group">
+            <label for="resetNumPlayers">Number of Players:</label>
+            <input type="number" id="resetNumPlayers" min="2" max="12" value="4">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelReset">Cancel</button>
+          <button class="btn btn-danger" id="btnConfirmReset">Reset & Start New Game</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raise Selector Modal -->
+    <div class="modal-backdrop" id="raiseModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Raise Table Stake</h3>
+          <button class="modal-close" id="closeRaiseModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Raising will increase the stake for all subsequent players.
+          </p>
+          <div class="raise-slider-box">
+            <div class="raise-target-display">
+              <span class="raise-amount-large" id="raiseAmountDisplay">20</span>
+              <span class="raise-unit">CHIPS</span>
+            </div>
+            <input type="range" id="raiseSlider" min="10" max="100" step="5" value="20" class="custom-range">
+            <div class="slider-limits">
+              <span id="sliderMin">Min: 10</span>
+              <span id="sliderMax">Max: 100</span>
+            </div>
+            <div class="raise-stake-preview" id="raiseStakePreview">
+              <div class="preview-pill">New Chaal: <strong id="previewChaalVal">20</strong></div>
+              <div class="preview-pill highlight">New Blind: <strong id="previewBlindVal">10</strong> <small>(½ of Chaal)</small></div>
+            </div>
+          </div>
+          <div class="quick-preset-row" id="raisePresets">
+            <!-- Preset buttons generated dynamically -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelRaise">Cancel</button>
+          <button class="btn btn-primary" id="btnConfirmRaise">Confirm Raise</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Declare Winner / Showdown Modal -->
+    <div class="modal-backdrop" id="winnerModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>🏆 Select Hand Winner</h3>
+          <button class="modal-close" id="closeWinnerModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            The hand has completed. Select who won the <strong id="winnerPotAmount">0</strong> chips pot:
+          </p>
+          <div class="winner-player-list" id="winnerPlayerList">
+            <!-- Populated via JS with active/remaining players -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelWinnerModal">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hand History / Audit Log Modal -->
+    <div class="modal-backdrop" id="historyModal" style="display: none;">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <h3>📜 Hand History & Action Audit</h3>
+          <button class="modal-close" id="closeHistoryModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="history-tabs">
+            <button class="tab-btn active" id="tabCurrentHand">Current Hand</button>
+            <button class="tab-btn" id="tabSessionHands">Past Hands</button>
+          </div>
+          <div class="history-content-scroll" id="historyContent">
+            <!-- Log items injected via JS -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnClearHistory">Clear Log</button>
+          <button class="btn btn-primary" id="btnCloseHistoryBtn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Leaderboard Modal -->
+    <div class="modal-backdrop" id="leaderboardModal" style="display: none;">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <h3>🏆 Session Leaderboard & Chip P&L</h3>
+          <button class="modal-close" id="closeLeaderboardModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="leaderboard-table-wrap">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th>Current Chips</th>
+                  <th>Net P&L</th>
+                  <th>Hands Won</th>
+                  <th>Win Rate</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboardBody">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="btnCloseLeaderboardBtn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings & Game Config Modal -->
+    <div class="modal-backdrop" id="settingsModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>⚙️ Game & Table Settings</h3>
+          <button class="modal-close" id="closeSettingsModal">&times;</button>
+        </div>
+        <div class="modal-body settings-form">
+          <div class="form-group">
+            <label for="cfgNumPlayers">Number of Players (2 - 12):</label>
+            <div class="number-input-row">
+              <input type="number" id="cfgNumPlayers" min="2" max="12" value="4">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnUpdatePlayersCount">Apply Count</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Player Names:</label>
+            <div class="player-names-list" id="cfgPlayerNamesList">
+              <!-- Dynamically generated name inputs -->
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="cfgInitialChips">Starting Buy-in (X):</label>
+              <input type="number" id="cfgInitialChips" min="10" max="10000" step="10" value="100">
+            </div>
+            <div class="form-group">
+              <label for="cfgBootAmount">Boot / Ante Amount:</label>
+              <input type="number" id="cfgBootAmount" min="1" max="500" step="1" value="5">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cfgMaxRounds">Maximum Betting Rounds:</label>
+            <input type="number" id="cfgMaxRounds" min="1" max="10" value="3">
+            <small class="field-hint">Hand automatically reaches showdown after this many rounds.</small>
+          </div>
+
+          <div class="danger-zone">
+            <h4>Danger Zone</h4>
+            <p>Reset the entire session and restore default chip counts.</p>
+            <button type="button" class="btn btn-danger" id="btnResetSession">Reset Entire Game Session</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelSettings">Cancel</button>
+          <button class="btn btn-primary" id="btnSaveSettings">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Celebration Winner Banner (Overlay alert) -->
+    <div class="celebration-overlay" id="celebrationOverlay" style="display: none;">
+      <div class="celebration-box">
+        <div class="trophy-bounce">🏆</div>
+        <h2 id="celebrationTitle">Player 3 Wins!</h2>
+        <div class="celebration-pot" id="celebrationPot">+60 Chips</div>
+        <p id="celebrationSub">Pot awarded! Next hand will start from Player 4.</p>
+        <button class="btn btn-deal btn-lg" id="btnCelebrationNext">Start Next Hand</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
