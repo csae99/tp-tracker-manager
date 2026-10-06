@@ -1482,6 +1482,207 @@ body {
 }
 
 /* ==========================================================================
+   Rules & Hand Rankings Modal
+   ========================================================================== */
+.modal-rules {
+  max-width: 680px;
+}
+
+.rules-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 1.25rem;
+  gap: 0.5rem;
+}
+
+.hand-ranks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hand-rank-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.hand-rank-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(245, 192, 66, 0.35);
+  transform: translateX(4px);
+}
+
+.hand-rank-card.rank-gold {
+  background: linear-gradient(135deg, rgba(245, 192, 66, 0.1), rgba(217, 119, 6, 0.06));
+  border-color: rgba(245, 192, 66, 0.4);
+  box-shadow: 0 4px 18px rgba(245, 192, 66, 0.08);
+}
+
+.rank-badge-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 52px;
+}
+
+.rank-number {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--gold-primary);
+  line-height: 1;
+}
+
+.rank-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.rank-pill.pill-gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #111827;
+  font-weight: 800;
+}
+
+.rank-info-col {
+  flex: 1;
+}
+
+.rank-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.rank-title small {
+  font-weight: 500;
+  color: var(--text-gold);
+  font-size: 0.82rem;
+}
+
+.rank-desc {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+.rank-cards-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mini-card {
+  width: 32px;
+  height: 44px;
+  background: #ffffff;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  line-height: 1.05;
+  user-select: none;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease;
+}
+
+.mini-card:hover {
+  transform: translateY(-2px);
+}
+
+.mini-card .card-val {
+  font-size: 0.82rem;
+  font-family: var(--font-main);
+  font-weight: 800;
+}
+
+.mini-card .card-suit {
+  font-size: 0.72rem;
+}
+
+.card-spade, .card-club {
+  color: #1e293b;
+}
+
+.card-heart, .card-diamond {
+  color: #dc2626;
+}
+
+.rank-example-tag {
+  margin-left: 0.4rem;
+  font-size: 0.74rem;
+  color: var(--text-gold);
+  font-weight: 600;
+  background: rgba(245, 192, 66, 0.1);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 192, 66, 0.2);
+}
+
+.table-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rule-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  line-height: 1.45;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.rule-box:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(245, 192, 66, 0.3);
+}
+
+.rule-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.35rem;
+}
+
+.rule-icon {
+  font-size: 1.1rem;
+}
+
+.rule-name {
+  color: var(--gold-primary);
+}
+
+.rule-highlight {
+  color: var(--gold-primary);
+  font-weight: 600;
+}
+
+/* ==========================================================================
    Responsive Breakpoints
    ========================================================================== */
 @media (max-width: 900px) {

@@ -1307,6 +1307,36 @@
     modal.style.display = 'flex';
   }
 
+  // Rules & Hand Rankings Modal
+  function openRulesModal() {
+    const modal = document.getElementById('rulesModal');
+    const tabCardRankings = document.getElementById('tabCardRankings');
+    const tabTableRules = document.getElementById('tabTableRules');
+    const contentCardRankings = document.getElementById('contentCardRankings');
+    const contentTableRules = document.getElementById('contentTableRules');
+
+    function showCardRankings() {
+      tabCardRankings.classList.add('active');
+      tabTableRules.classList.remove('active');
+      contentCardRankings.style.display = 'block';
+      contentTableRules.style.display = 'none';
+    }
+
+    function showTableRules() {
+      tabTableRules.classList.add('active');
+      tabCardRankings.classList.remove('active');
+      contentTableRules.style.display = 'block';
+      contentCardRankings.style.display = 'none';
+    }
+
+    tabCardRankings.onclick = showCardRankings;
+    tabTableRules.onclick = showTableRules;
+
+    // Default to card rankings tab
+    showCardRankings();
+    modal.style.display = 'flex';
+  }
+
   // Session Leaderboard Modal
   function openLeaderboardModal() {
     const modal = document.getElementById('leaderboardModal');
@@ -1488,6 +1518,7 @@
   function initEventListeners() {
     // Header actions
     document.getElementById('btnUndo').addEventListener('click', performUndo);
+    document.getElementById('btnRules').addEventListener('click', openRulesModal);
     document.getElementById('btnHistory').addEventListener('click', openHistoryModal);
     document.getElementById('btnLeaderboard').addEventListener('click', openLeaderboardModal);
     document.getElementById('btnSettings').addEventListener('click', openSettingsModal);
@@ -1510,6 +1541,13 @@
     document.getElementById('btnShow').addEventListener('click', triggerShowdown);
 
     // Modal Closes
+    document.getElementById('closeRulesModal').addEventListener('click', () => {
+      document.getElementById('rulesModal').style.display = 'none';
+    });
+    document.getElementById('btnCloseRulesBtn').addEventListener('click', () => {
+      document.getElementById('rulesModal').style.display = 'none';
+    });
+
     document.getElementById('closeResetModal').addEventListener('click', () => {
       document.getElementById('resetModal').style.display = 'none';
     });

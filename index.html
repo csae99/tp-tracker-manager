@@ -33,6 +33,10 @@
           <span class="icon">↺</span>
           <span class="btn-text">Undo</span>
         </button>
+        <button id="btnRules" class="btn btn-secondary btn-icon" title="Game Rules & Hand Rankings">
+          <span class="icon">📖</span>
+          <span class="btn-text">Rules</span>
+        </button>
         <button id="btnHistory" class="btn btn-secondary btn-icon" title="View hand log">
           <span class="icon">📜</span>
           <span class="btn-text">Log</span>
@@ -308,6 +312,208 @@
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" id="btnCancelWinnerModal">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Rules & Card Rankings Modal -->
+    <div class="modal-backdrop" id="rulesModal" style="display: none;">
+      <div class="modal-card modal-wide modal-rules">
+        <div class="modal-header">
+          <h3>📖 Teen Patti Rules & Hand Hierarchy</h3>
+          <button class="modal-close" id="closeRulesModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="rules-tabs">
+            <button class="tab-btn active" id="tabCardRankings">🃏 Card Hand Rankings</button>
+            <button class="tab-btn" id="tabTableRules">⚙️ Table & Betting Rules</button>
+          </div>
+          
+          <!-- Tab 1: Card Rankings -->
+          <div class="rules-content-wrap" id="contentCardRankings">
+            <p class="modal-desc">
+              In Teen Patti (Flash/Flush), hands consist of 3 cards. Ranked from <strong>highest to lowest</strong>:
+            </p>
+            <div class="hand-ranks-list">
+              <!-- Rank 1: Trail / Trio -->
+              <div class="hand-rank-card rank-gold">
+                <div class="rank-badge-col">
+                  <span class="rank-number">#1</span>
+                  <span class="rank-pill pill-gold">HIGHEST</span>
+                </div>
+                <div class="rank-info-col">
+                  <div class="rank-title">Trail / Trio / Set <small>(Three of a Kind)</small></div>
+                  <div class="rank-desc">Three cards of the exact same rank. <strong>A-A-A</strong> is the highest possible hand, followed by <strong>K-K-K</strong>, down to <strong>2-2-2</strong> (lowest).</div>
+                  <div class="rank-cards-row">
+                    <span class="mini-card card-spade"><span class="card-val">A</span><span class="card-suit">♠</span></span>
+                    <span class="mini-card card-heart"><span class="card-val">A</span><span class="card-suit">♥</span></span>
+                    <span class="mini-card card-diamond"><span class="card-val">A</span><span class="card-suit">♦</span></span>
+                    <span class="rank-example-tag">Ex: A-A-A beats K-K-K</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rank 2: Pure Sequence -->
+              <div class="hand-rank-card">
+                <div class="rank-badge-col">
+                  <span class="rank-number">#2</span>
+                  <span class="rank-pill">PURE</span>
+                </div>
+                <div class="rank-info-col">
+                  <div class="rank-title">Pure Sequence / Straight Flush <small>(Pakki Round)</small></div>
+                  <div class="rank-desc">Three consecutive cards of the <strong>same suit</strong>. In traditional Teen Patti, <strong>A-2-3</strong> is highest, followed by <strong>A-K-Q</strong>, <strong>K-Q-J</strong>, down to <strong>4-3-2</strong>.</div>
+                  <div class="rank-cards-row">
+                    <span class="mini-card card-heart"><span class="card-val">A</span><span class="card-suit">♥</span></span>
+                    <span class="mini-card card-heart"><span class="card-val">2</span><span class="card-suit">♥</span></span>
+                    <span class="mini-card card-heart"><span class="card-val">3</span><span class="card-suit">♥</span></span>
+                    <span class="rank-example-tag">Ex: A-2-3♥ or A-K-Q♠</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rank 3: Sequence -->
+              <div class="hand-rank-card">
+                <div class="rank-badge-col">
+                  <span class="rank-number">#3</span>
+                  <span class="rank-pill">STRAIGHT</span>
+                </div>
+                <div class="rank-info-col">
+                  <div class="rank-title">Sequence / Straight <small>(Normal Round)</small></div>
+                  <div class="rank-desc">Three consecutive cards of <strong>different suits</strong>. <strong>A-2-3</strong> is highest, followed by <strong>A-K-Q</strong>, <strong>K-Q-J</strong>, down to <strong>4-3-2</strong>.</div>
+                  <div class="rank-cards-row">
+                    <span class="mini-card card-spade"><span class="card-val">A</span><span class="card-suit">♠</span></span>
+                    <span class="mini-card card-heart"><span class="card-val">2</span><span class="card-suit">♥</span></span>
+                    <span class="mini-card card-club"><span class="card-val">3</span><span class="card-suit">♣</span></span>
+                    <span class="rank-example-tag">Ex: A-2-3 mixed suits</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rank 4: Color / Flush -->
+              <div class="hand-rank-card">
+                <div class="rank-badge-col">
+                  <span class="rank-number">#4</span>
+                  <span class="rank-pill">COLOR</span>
+                </div>
+                <div class="rank-info-col">
+                  <div class="rank-title">Color / Flush <small>(Rang)</small></div>
+                  <div class="rank-desc">Three cards of the <strong>same suit</strong>, not in sequence. If two players have a color, the highest individual card wins (e.g. A-K-J beats A-K-10).</div>
+                  <div class="rank-cards-row">
+                    <span class="mini-card card-diamond"><span class="card-val">A</span><span class="card-suit">♦</span></span>
+                    <span class="mini-card card-diamond"><span class="card-val">K</span><span class="card-suit">♦</span></span>
+                    <span class="mini-card card-diamond"><span class="card-val">9</span><span class="card-suit">♦</span></span>
+                    <span class="rank-example-tag">Ex: All Diamonds</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rank 5: Pair -->
+              <div class="hand-rank-card">
+                <div class="rank-badge-col">
+                  <span class="rank-number">#5</span>
+                  <span class="rank-pill">PAIR</span>
+                </div>
+                <div class="rank-info-col">
+                  <div class="rank-title">Pair <small>(Double)</small></div>
+                  <div class="rank-desc">Two cards of the same rank + one kicker card. Higher pair wins (A-A-x beats K-K-x). If pairs are equal, the higher third card (kicker) decides.</div>
+                  <div class="rank-cards-row">
+                    <span class="mini-card card-spade"><span class="card-val">K</span><span class="card-suit">♠</span></span>
+                    <span class="mini-card card-club"><span class="card-val">K</span><span class="card-suit">♣</span></span>
+                    <span class="mini-card card-heart"><span class="card-val">9</span><span class="card-suit">♥</span></span>
+                    <span class="rank-example-tag">Ex: Pair of Kings</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rank 6: High Card -->
+              <div class="hand-rank-card">
+                <div class="rank-badge-col">
+                  <span class="rank-number">#6</span>
+                  <span class="rank-pill">HIGH</span>
+                </div>
+                <div class="rank-info-col">
+                  <div class="rank-title">High Card</div>
+                  <div class="rank-desc">Three mismatched cards of different ranks and suits. Hands are ranked card by card from highest: <strong>A > K > Q > J > 10 ... > 2</strong>.</div>
+                  <div class="rank-cards-row">
+                    <span class="mini-card card-spade"><span class="card-val">A</span><span class="card-suit">♠</span></span>
+                    <span class="mini-card card-heart"><span class="card-val">J</span><span class="card-suit">♥</span></span>
+                    <span class="mini-card card-club"><span class="card-val">4</span><span class="card-suit">♣</span></span>
+                    <span class="rank-example-tag">Ex: Ace High</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Table Rules -->
+          <div class="rules-content-wrap" id="contentTableRules" style="display: none;">
+            <div class="table-rules-list">
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">🪙</span>
+                  <span class="rule-name">1. Boot / Ante</span>
+                </div>
+                <p>At the start of every hand, the Boot amount (default 5 chips) is automatically collected from each player into the Main Pot before any cards are dealt.</p>
+              </div>
+
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">👁️</span>
+                  <span class="rule-name">2. Blind vs. Seen (1 : 2 Ratio)</span>
+                </div>
+                <p><strong>Blind players</strong> pay 1x the Blind stake (which is ½ of the Chaal stake). <strong>Seen players</strong> pay 2x the Blind stake (full Chaal stake).<br>
+                <span class="rule-highlight">Seeing cards is permanent:</span> Once a player clicks "SEE CARDS", they remain Seen for the rest of that hand.</p>
+              </div>
+
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">📈</span>
+                  <span class="rule-name">3. Monotonic Call Ratchet & Raises</span>
+                </div>
+                <p>The table stake never decreases; it only moves upwards. Any raise must be strictly greater than the current required call. Once raised, all subsequent players must match at least the new raised stake.</p>
+              </div>
+
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">🔥</span>
+                  <span class="rule-name">4. All-In & 2-Button Lock</span>
+                </div>
+                <p>Any active player can click <strong>ALL IN</strong> to push their entire bankroll into the pot.<br>
+                Once initiated, all subsequent players are locked into strictly two choices: <strong>PACK (Fold)</strong> or <strong>CALL ALL-IN</strong>.<br>
+                <strong>Per-Round Matching:</strong> Opponents match the All-In bet placed in the active round.<br>
+                <strong>Low Bankroll / Buyout:</strong> If an opponent does not have enough chips to match the call, the button shows <strong>LOW CHIPS</strong>, and they can either <strong>PACK</strong> or <strong>ADD BANKROLL</strong> to cover the shortage.</p>
+              </div>
+
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">🏁</span>
+                  <span class="rule-name">5. Round Limit & Final Showdown</span>
+                </div>
+                <p>Hands run for a maximum of <strong>3 rounds</strong>. Showdown is available at the end of Round 3 or when ≤ 2 active players remain.<br>
+                When an All-In occurs, that round is strictly the final round—once all active players have responded, the hand immediately concludes with the <strong>Showdown</strong>.<br>
+                If all players except one fold, the remaining player automatically wins the entire pot.</p>
+              </div>
+
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">🔄</span>
+                  <span class="rule-name">6. Dealer & Turn Rotation</span>
+                </div>
+                <p>When a player wins the pot, the Dealer button moves to the winner, and the next hand begins with the player to the immediate left (clockwise) of the winner.</p>
+              </div>
+
+              <div class="rule-box">
+                <div class="rule-header">
+                  <span class="rule-icon">💰</span>
+                  <span class="rule-name">7. Rebuys & Top-Ups</span>
+                </div>
+                <p>Players can add chips to their bankroll at any time (minimum +100 chips) by clicking their Bankroll box on their table pod.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="btnCloseRulesBtn">Got It</button>
         </div>
       </div>
     </div>
