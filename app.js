@@ -1617,7 +1617,11 @@
           <div class="winner-pick-avatar" style="background-color: ${p.color};">${p.id}</div>
           <div>
             <div class="winner-pick-name">${escapeHtml(p.name)}</div>
-            <div class="winner-pick-chips">${p.chips} chips (${p.isBlind ? 'Blind' : 'Seen'})</div>
+            <div class="winner-pick-chips">
+              <span class="winner-pick-bet">Bet in hand: <strong>${p.currentHandBet || 0} chips</strong> (${p.isBlind ? 'Blind' : 'Seen'})</span>
+              <span class="winner-pick-separator">&bull;</span>
+              <span class="winner-pick-bankroll">Bankroll: ${p.chips}</span>
+            </div>
           </div>
         </div>
         <div class="winner-pick-action">Select Winner ➔</div>

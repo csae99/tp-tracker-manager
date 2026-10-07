@@ -1248,6 +1248,29 @@ body {
 .winner-pick-chips {
   font-size: 0.8rem;
   color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.winner-pick-bet {
+  color: #fef08a;
+}
+
+.winner-pick-bet strong {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.winner-pick-separator {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.75rem;
+}
+
+.winner-pick-bankroll {
+  color: var(--text-muted);
 }
 
 .winner-pick-action {
