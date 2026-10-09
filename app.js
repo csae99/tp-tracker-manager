@@ -168,7 +168,10 @@
       Object.assign(state.config, data.config || {});
       state.handNumber = data.handNumber || 1;
       state.dealerIndex = data.dealerIndex || 0;
-      state.players = data.players || [];
+      state.players = (data.players || []).map(p => ({
+        ...p,
+        isSittingOut: Boolean(p.isSittingOut)
+      }));
       state.sessionHistory = data.sessionHistory || [];
       state.isHandActive = data.isHandActive || false;
       state.pot = data.pot || 0;
@@ -464,6 +467,7 @@
         initialChips: state.config.initialChips,
         isBlind: true,
         isFolded: false,
+        isSittingOut: false,
         currentHandBet: 0,
         currentRoundBet: 0,
         handsWon: 0,
@@ -476,12 +480,19 @@
 
   /**
    * Start a new hand:
-   * - Rotates dealer if hand > 1
-   * - Auto-deducts boot amount (5) from every active player into Pot
+   * - Requires at least 2 seated players
+   * - Rotates dealer to next seated player
+   * - Auto-deducts boot amount from seated players into Pot (sitting out players skip boot)
    * - Sets round to 1, blind stake to boot amount
-   * - First turn goes to the player next to the dealer
+   * - First turn goes to the active player next to the dealer
    */
   function startNewHand(explicitFirstPlayerIndex = null) {
+    const seated = state.players.filter(p => !p.isSittingOut);
+    if (seated.length < 2) {
+      alert('At least 2 seated players are required to deal a hand. Please have players Sit In.');
+      return;
+    }
+
     pushUndoSnapshot('Start New Hand');
 
     state.isHandActive = true;
@@ -496,6 +507,17 @@
       state.dealerIndex = (explicitFirstPlayerIndex - 1 + state.players.length) % state.players.length;
     }
 
+    // Ensure dealerIndex lands on a seated player
+    if (state.players[state.dealerIndex]?.isSittingOut) {
+      let d = (state.dealerIndex + 1) % state.players.length;
+      let checked = 0;
+      while (state.players[d]?.isSittingOut && checked < state.players.length) {
+        d = (d + 1) % state.players.length;
+        checked++;
+      }
+      state.dealerIndex = d;
+    }
+
     // Reset All-In & Showdown state
     state.isAllInActive = false;
     state.isShowdownPending = false;
@@ -504,13 +526,21 @@
     state.allInTargetBet = 0;
     state.allInPendingPlayerIds = [];
 
-    // Auto-deduct boot/ante from all players with chips
+    // Auto-deduct boot/ante from seated players with chips (sitting-out players skip boot)
     const boot = state.config.bootAmount;
     state.players.forEach((p, idx) => {
-      p.isBlind = true;
-      p.isFolded = false;
       p.currentHandBet = 0;
       p.currentRoundBet = 0;
+
+      if (p.isSittingOut) {
+        p.isFolded = true;
+        p.isBlind = false;
+        logAction(`🪑 ${p.name} is sitting out (Skipped hand)`, 'fold-entry');
+        return;
+      }
+
+      p.isBlind = true;
+      p.isFolded = false;
 
       const deduction = Math.min(p.chips, boot);
       p.chips -= deduction;
@@ -520,7 +550,7 @@
       if (deduction > 0) {
         logAction(`${p.name} placed Boot ante (-${deduction} chips)`, 'boot-entry');
       } else {
-        logAction(`⚠️ ${p.name} has 0 chips (Owes Boot ante. Must Add Bankroll or Pack)`, 'fold-entry');
+        logAction(`⚠️ ${p.name} has 0 chips (Owes Boot ante. Must Add Bankroll, Pack, or Sit Out)`, 'fold-entry');
       }
     });
 
@@ -534,13 +564,19 @@
   }
 
   function initPendingRoundPlayers() {
+    const seatedActive = state.players.filter(p => !p.isFolded && !p.isSittingOut);
+    if (seatedActive.length === 0) {
+      state.pendingRoundPlayerIds = [];
+      state.turnsInCurrentRound = 0;
+      return;
+    }
     const startIdx = getNextActivePlayerIndex(state.dealerIndex);
     const n = state.players.length;
     const list = [];
     for (let i = 0; i < n; i++) {
       const idx = (startIdx + i) % n;
       const p = state.players[idx];
-      if (p && !p.isFolded) {
+      if (p && !p.isFolded && !p.isSittingOut) {
         list.push(p.id);
       }
     }
@@ -549,7 +585,7 @@
   }
 
   function getActivePlayers() {
-    return state.players.filter(p => !p.isFolded);
+    return state.players.filter(p => !p.isFolded && !p.isSittingOut);
   }
 
   function getNextActivePlayerIndex(fromIndex) {
@@ -557,7 +593,7 @@
     let next = (fromIndex + 1) % n;
     let checked = 0;
     while (checked < n) {
-      if (!state.players[next].isFolded) {
+      if (!state.players[next].isFolded && !state.players[next].isSittingOut) {
         return next;
       }
       next = (next + 1) % n;
@@ -594,10 +630,10 @@
     if (actingPlayer) {
       state.pendingRoundPlayerIds = state.pendingRoundPlayerIds.filter(id => id !== actingPlayer.id);
     }
-    // Also remove any players who have folded
+    // Also remove any players who have folded or are sitting out
     state.pendingRoundPlayerIds = state.pendingRoundPlayerIds.filter(id => {
       const p = state.players.find(x => x.id === id);
-      return p && !p.isFolded;
+      return p && !p.isFolded && !p.isSittingOut;
     });
 
     state.turnsInCurrentRound++;
@@ -683,6 +719,75 @@
   }
 
   /**
+   * Toggle Sit Out / Sit In for a player:
+   * - When Sitting Out: Skips boot deduction, skips turns, pod is dimmed.
+   * - If player sits out during an active hand, they are folded immediately from the current hand.
+   * - When Sitting back In: Joins the game for the next hand (or immediately if hand is not active).
+   */
+  function togglePlayerSitOut(playerIndex) {
+    const player = state.players[playerIndex];
+    if (!player) return;
+
+    pushUndoSnapshot(`${player.name} ${player.isSittingOut ? 'Sat In' : 'Sat Out'}`);
+
+    if (player.isSittingOut) {
+      player.isSittingOut = false;
+      logAction(`🟢 ${player.name} sat back IN (Will play next hand)`, 'boot-entry');
+      sound.playTone(520, 'sine', 0.15, 0.1);
+    } else {
+      player.isSittingOut = true;
+      logAction(`🪑 ${player.name} sat OUT`, 'fold-entry');
+      sound.playFoldSound();
+
+      // If hand is active and player wasn't already folded:
+      if (state.isHandActive && !player.isFolded) {
+        player.isFolded = true;
+
+        if (state.isAllInActive) {
+          state.allInPendingPlayerIds = (state.allInPendingPlayerIds || []).filter(id => id !== player.id);
+        }
+        state.pendingRoundPlayerIds = (state.pendingRoundPlayerIds || []).filter(id => id !== player.id);
+
+        const active = getActivePlayers();
+        if (active.length === 1) {
+          state.isAllInActive = false;
+          handleSinglePlayerWin(active[0]);
+          renderAll();
+          saveStateToStorage();
+          return;
+        }
+
+        // If an All-In round is active and all remaining active players responded:
+        if (state.isAllInActive && state.allInPendingPlayerIds.length === 0) {
+          logAction(`🏁 All active players have responded to All-In. Final Showdown!`, 'round-entry');
+          state.isAllInActive = false;
+          state.isShowdownPending = true;
+          renderAll();
+          saveStateToStorage();
+          triggerShowdown('All-In Round Concluded');
+          return;
+        }
+
+        // If it was currently their turn, advance turn
+        if (playerIndex === state.currentTurnIndex) {
+          if (state.isAllInActive) {
+            state.currentTurnIndex = getNextActivePlayerIndex(state.currentTurnIndex);
+            sound.playTurnBell();
+            renderAll();
+            saveStateToStorage();
+            return;
+          }
+          advanceTurn();
+          return;
+        }
+      }
+    }
+
+    renderAll();
+    saveStateToStorage();
+  }
+
+  /**
    * All-In Action: Player pushes their entire remaining bankroll.
    * Locks all subsequent players into strictly two options: PACK or CALL ALL-IN.
    * Once all remaining active players respond, no further rounds occur—Showdown is triggered!
@@ -717,7 +822,7 @@
     state.allInTargetBet = player.currentRoundBet;
 
     // Remaining active players who must respond (either Pack or Call All-In)
-    const pending = state.players.filter(p => !p.isFolded && p.id !== player.id);
+    const pending = state.players.filter(p => !p.isFolded && !p.isSittingOut && p.id !== player.id);
     state.allInPendingPlayerIds = pending.map(p => p.id);
 
     logAction(`🔥 ${player.name} went ALL-IN (+${pushAmount} chips in Round ${state.roundNumber})! All remaining players must Call All-In or Pack.`, 'chaal-entry');
@@ -818,7 +923,7 @@
     const boot = state.config.bootAmount;
 
     state.players.forEach(p => {
-      if (p.isFolded) return;
+      if (p.isFolded || p.isSittingOut) return;
       const currentPaid = p.currentHandBet || 0;
       const owed = Math.max(0, boot - currentPaid);
       if (owed > 0 && p.chips > 0) {
@@ -1161,6 +1266,7 @@
       const isCurrentTurn = state.isHandActive && index === state.currentTurnIndex;
       if (isCurrentTurn) pod.classList.add('active-turn');
       if (p.isFolded) pod.classList.add('folded');
+      if (p.isSittingOut) pod.classList.add('sitting-out');
 
       // Net P&L calculation
       const pnl = p.chips - p.initialChips;
@@ -1169,7 +1275,9 @@
 
       // Status badge
       let statusBadge = '';
-      if (p.isFolded) {
+      if (p.isSittingOut) {
+        statusBadge = `<span class="pod-status-badge badge-sitting-out">🪑 Sitting Out</span>`;
+      } else if (p.isFolded) {
         statusBadge = `<span class="pod-status-badge badge-folded">Folded</span>`;
       } else if (state.isHandActive && p.chips === 0 && p.currentHandBet > 0) {
         statusBadge = `<span class="pod-status-badge badge-allin">ALL-IN</span>`;
@@ -1193,6 +1301,9 @@
             <div class="pod-name">${escapeHtml(p.name)}</div>
             ${statusBadge}
           </div>
+          <button type="button" class="btn-pod-sit ${p.isSittingOut ? 'btn-pod-sit-in' : 'btn-pod-sit-out'}" title="${p.isSittingOut ? 'Sit In (Play next hand)' : 'Sit Out (Take break / skip hands)'}">
+            ${p.isSittingOut ? '▶ Sit In' : '⏸ Sit Out'}
+          </button>
         </div>
 
         <div class="pod-financials">
@@ -1211,9 +1322,18 @@
         </div>
       `;
 
+      // Sit In / Sit Out button listener
+      const btnSit = pod.querySelector('.btn-pod-sit');
+      if (btnSit) {
+        btnSit.addEventListener('click', (e) => {
+          e.stopPropagation();
+          togglePlayerSitOut(index);
+        });
+      }
+
       // Clicking on a pod allows looking at cards if it's their turn and they are blind (not during All-In)
       pod.addEventListener('click', () => {
-        if (state.isHandActive && !state.isAllInActive && index === state.currentTurnIndex && !p.isFolded && p.isBlind) {
+        if (state.isHandActive && !state.isAllInActive && index === state.currentTurnIndex && !p.isFolded && !p.isSittingOut && p.isBlind) {
           handleSeeCards();
         }
       });
@@ -1345,6 +1465,10 @@
 
         btnQuickTopUp.onclick = () => addPlayerChips(state.currentTurnIndex, quickAdd);
         btnCustomTopUp.onclick = () => openTopupModal(state.currentTurnIndex, shortage);
+        const btnDockSitOut = document.getElementById('btnDockSitOut');
+        if (btnDockSitOut) {
+          btnDockSitOut.onclick = () => togglePlayerSitOut(state.currentTurnIndex);
+        }
       } else {
         // Player has enough bankroll to match the All-In!
         btnCallAllIn.disabled = false;
@@ -1413,6 +1537,10 @@
 
       btnQuickTopUp.onclick = () => addPlayerChips(state.currentTurnIndex, 100);
       btnCustomTopUp.onclick = () => openTopupModal(state.currentTurnIndex, 100);
+      const btnDockSitOut = document.getElementById('btnDockSitOut');
+      if (btnDockSitOut) {
+        btnDockSitOut.onclick = () => togglePlayerSitOut(state.currentTurnIndex);
+      }
 
       if (raiseGroup) {
         raiseGroup.style.opacity = '0.35';
@@ -1783,13 +1911,27 @@
     function renderNameInputs(count) {
       namesList.innerHTML = '';
       for (let i = 0; i < count; i++) {
-        const curName = state.players[i] ? state.players[i].name : `Player ${i + 1}`;
+        const curPlayer = state.players[i];
+        const curName = curPlayer ? curPlayer.name : `Player ${i + 1}`;
+        const isSitting = curPlayer ? Boolean(curPlayer.isSittingOut) : false;
         const div = document.createElement('div');
+        div.className = 'cfg-player-row';
         div.innerHTML = `
           <input type="text" id="cfgPlayerName_${i}" value="${escapeHtml(curName)}" placeholder="Player ${i + 1}" maxlength="16">
+          <button type="button" class="btn-cfg-sit ${isSitting ? 'btn-cfg-sit-in' : 'btn-cfg-sit-out'}" data-index="${i}" title="${isSitting ? 'Sit In (Play hands)' : 'Sit Out (Take break / skip hands)'}">
+            ${isSitting ? '▶ Sit In' : '⏸ Sit Out'}
+          </button>
         `;
         namesList.appendChild(div);
       }
+
+      namesList.querySelectorAll('.btn-cfg-sit').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.getAttribute('data-index'), 10);
+          togglePlayerSitOut(idx);
+          renderNameInputs(count);
+        };
+      });
     }
 
     renderNameInputs(state.config.numPlayers);
@@ -1821,6 +1963,7 @@
           initialChips: newChips,
           isBlind: true,
           isFolded: false,
+          isSittingOut: false,
           currentHandBet: 0,
           currentRoundBet: 0,
           handsWon: 0,
@@ -1907,6 +2050,7 @@
       p.handsWon = 0;
       p.isBlind = true;
       p.isFolded = false;
+      p.isSittingOut = false;
       p.currentHandBet = 0;
     });
 
