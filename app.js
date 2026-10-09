@@ -1894,6 +1894,205 @@
     modal.style.display = 'flex';
   }
 
+  // --- Settle Up & WhatsApp Summary ---
+
+  function calculateSettlements(players) {
+    const balances = players.map(p => {
+      const net = (p.chips || 0) - (p.initialChips || 0);
+      return {
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        chips: p.chips,
+        initialChips: p.initialChips,
+        handsWon: p.handsWon || 0,
+        net: net
+      };
+    });
+
+    const creditors = balances.filter(p => p.net > 0).sort((a, b) => b.net - a.net);
+    const debtors = balances.filter(p => p.net < 0).sort((a, b) => a.net - b.net);
+
+    const cList = creditors.map(c => ({ ...c }));
+    const dList = debtors.map(d => ({ ...d, debt: Math.abs(d.net) }));
+
+    const transactions = [];
+    let cIdx = 0;
+    let dIdx = 0;
+
+    while (cIdx < cList.length && dIdx < dList.length) {
+      const creditor = cList[cIdx];
+      const debtor = dList[dIdx];
+
+      const amount = Math.min(creditor.net, debtor.debt);
+
+      if (amount > 0) {
+        transactions.push({
+          from: debtor.name,
+          fromId: debtor.id,
+          fromColor: debtor.color,
+          to: creditor.name,
+          toId: creditor.id,
+          toColor: creditor.color,
+          amount: Math.round(amount)
+        });
+
+        creditor.net -= amount;
+        debtor.debt -= amount;
+      }
+
+      if (creditor.net <= 0.001) cIdx++;
+      if (debtor.debt <= 0.001) dIdx++;
+    }
+
+    const totalPots = (state.sessionHistory || []).reduce((acc, h) => acc + (h.pot || 0), 0);
+    const handsCount = Math.max(0, state.handNumber - 1);
+    const topWinner = [...balances].sort((a, b) => b.net - a.net)[0] || null;
+
+    return { balances, transactions, totalPots, handsCount, topWinner };
+  }
+
+  function generateWhatsappText(data) {
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const sorted = [...data.balances].sort((a, b) => b.net - a.net);
+
+    let lines = [];
+    lines.push(`🃏 *TEEN PATTI GAME NIGHT SUMMARY* 🃏`);
+    lines.push(`📅 ${dateStr} • 🎯 ${data.handsCount} Hands Played`);
+    if (data.totalPots > 0) {
+      lines.push(`💰 Total Pot Volume: ${data.totalPots.toLocaleString()} Chips`);
+    }
+    lines.push(``);
+    lines.push(`🏆 *FINAL STANDINGS & NET P&L*`);
+    sorted.forEach((p, idx) => {
+      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '•';
+      const sign = p.net > 0 ? '+' : '';
+      lines.push(`${medal} *${p.name}*: ${sign}${p.net} chips (${p.handsWon} win${p.handsWon === 1 ? '' : 's'})`);
+    });
+
+    lines.push(``);
+    lines.push(`🤝 *SETTLE UP (WHO PAYS WHOM)*`);
+    if (data.transactions.length === 0) {
+      lines.push(`✅ All accounts are even! No payments needed.`);
+    } else {
+      data.transactions.forEach(t => {
+        lines.push(`👉 *${t.from}* pays *${t.to}*: *${t.amount}* chips`);
+      });
+      lines.push(`✅ All debts will be settled!`);
+    }
+
+    lines.push(``);
+    lines.push(`📱 *Tracked via Teen Patti Tracker*`);
+
+    return lines.join('\n');
+  }
+
+  function openSettleModal() {
+    const modal = document.getElementById('settleModal');
+    const data = calculateSettlements(state.players);
+
+    // Active Pot Alert
+    const potAlert = document.getElementById('settlePotAlert');
+    if (potAlert) {
+      if (state.isHandActive && state.pot > 0) {
+        potAlert.className = 'settle-pot-warning';
+        potAlert.style.display = 'flex';
+        potAlert.innerHTML = `⚠️ <span>Hand #${state.handNumber} is currently in progress with <strong>${state.pot} chips</strong> in the table pot. Finish the hand for 100% exact settlement.</span>`;
+      } else {
+        potAlert.style.display = 'none';
+      }
+    }
+
+    // Quick Stats Grid
+    const statsGrid = document.getElementById('settleStatsGrid');
+    if (statsGrid) {
+      const topName = data.topWinner && data.topWinner.net > 0 
+        ? `${escapeHtml(data.topWinner.name)} (+${data.topWinner.net})`
+        : 'Even';
+
+      statsGrid.innerHTML = `
+        <div class="settle-stat-card">
+          <span class="settle-stat-val">${data.handsCount}</span>
+          <span class="settle-stat-label">Hands Played</span>
+        </div>
+        <div class="settle-stat-card">
+          <span class="settle-stat-val">${data.totalPots.toLocaleString()}</span>
+          <span class="settle-stat-label">Total Pot Cycled</span>
+        </div>
+        <div class="settle-stat-card">
+          <span class="settle-stat-val" style="color: #4ade80;">${topName}</span>
+          <span class="settle-stat-label">Session MVP</span>
+        </div>
+      `;
+    }
+
+    // Debt Transfers List
+    const txContainer = document.getElementById('settleTxContainer');
+    if (txContainer) {
+      txContainer.innerHTML = '';
+      if (data.transactions.length === 0) {
+        txContainer.innerHTML = `<div class="settle-all-even-card">🎉 All player balances are even! No payments or transfers needed.</div>`;
+      } else {
+        data.transactions.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'settle-tx-card';
+          card.innerHTML = `
+            <div class="settle-tx-party">
+              <span class="settle-avatar" style="background: ${t.fromColor};">${t.fromId}</span>
+              <span class="settle-tx-name">${escapeHtml(t.from)}</span>
+            </div>
+            <div class="settle-tx-arrow-wrap">
+              <span class="settle-tx-amount-badge">pays ${t.amount} chips</span>
+              <span class="settle-tx-arrow-icon">➔</span>
+            </div>
+            <div class="settle-tx-party to">
+              <span class="settle-tx-name">${escapeHtml(t.to)}</span>
+              <span class="settle-avatar" style="background: ${t.toColor};">${t.toId}</span>
+            </div>
+          `;
+          txContainer.appendChild(card);
+        });
+      }
+    }
+
+    // Balances Table
+    const balancesBody = document.getElementById('settleBalancesBody');
+    if (balancesBody) {
+      balancesBody.innerHTML = '';
+      const sorted = [...data.balances].sort((a, b) => b.net - a.net);
+      sorted.forEach(p => {
+        const pnlClass = p.net > 0 ? 'pnl-positive' : (p.net < 0 ? 'pnl-negative' : 'pnl-neutral');
+        const pnlSign = p.net > 0 ? '+' : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${p.color}; margin-right: 6px;"></span>
+            <strong>${escapeHtml(p.name)}</strong>
+          </td>
+          <td>${p.initialChips}</td>
+          <td><strong>${p.chips}</strong></td>
+          <td><span class="pod-pnl ${pnlClass}">${pnlSign}${p.net}</span></td>
+          <td>${p.handsWon}</td>
+        `;
+        balancesBody.appendChild(tr);
+      });
+    }
+
+    // WhatsApp Text & Link
+    const rawText = generateWhatsappText(data);
+    const textarea = document.getElementById('settleWhatsappText');
+    if (textarea) {
+      textarea.value = rawText;
+    }
+
+    const shareBtn = document.getElementById('btnShareWhatsapp');
+    if (shareBtn) {
+      shareBtn.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(rawText)}`;
+    }
+
+    modal.style.display = 'flex';
+  }
+
   // Settings Modal
   function openSettingsModal() {
     const modal = document.getElementById('settingsModal');
@@ -2083,6 +2282,8 @@
     document.getElementById('btnRules').addEventListener('click', openRulesModal);
     document.getElementById('btnHistory').addEventListener('click', openHistoryModal);
     document.getElementById('btnLeaderboard').addEventListener('click', openLeaderboardModal);
+    const btnSettleUp = document.getElementById('btnSettleUp');
+    if (btnSettleUp) btnSettleUp.addEventListener('click', openSettleModal);
     document.getElementById('btnSettings').addEventListener('click', openSettingsModal);
     document.getElementById('btnResetGameHeader').addEventListener('click', openResetModal);
 
@@ -2169,6 +2370,62 @@
     document.getElementById('btnCloseLeaderboardBtn').addEventListener('click', () => {
       document.getElementById('leaderboardModal').style.display = 'none';
     });
+
+    // Settle Up Modal Handlers
+    const btnSettleFromLeaderboard = document.getElementById('btnSettleUpFromLeaderboard');
+    if (btnSettleFromLeaderboard) {
+      btnSettleFromLeaderboard.addEventListener('click', () => {
+        document.getElementById('leaderboardModal').style.display = 'none';
+        openSettleModal();
+      });
+    }
+
+    const linkSettleReset = document.getElementById('linkSettleBeforeReset');
+    if (linkSettleReset) {
+      linkSettleReset.addEventListener('click', () => {
+        document.getElementById('resetModal').style.display = 'none';
+        openSettleModal();
+      });
+    }
+
+    const closeSettle = document.getElementById('closeSettleModal');
+    if (closeSettle) {
+      closeSettle.addEventListener('click', () => {
+        document.getElementById('settleModal').style.display = 'none';
+      });
+    }
+
+    const btnCloseSettleBtn = document.getElementById('btnCloseSettleModalBtn');
+    if (btnCloseSettleBtn) {
+      btnCloseSettleBtn.addEventListener('click', () => {
+        document.getElementById('settleModal').style.display = 'none';
+      });
+    }
+
+    const btnCopyWhatsapp = document.getElementById('btnCopyWhatsappSummary');
+    if (btnCopyWhatsapp) {
+      btnCopyWhatsapp.addEventListener('click', () => {
+        const textarea = document.getElementById('settleWhatsappText');
+        if (textarea) {
+          textarea.select();
+          textarea.setSelectionRange(0, 99999);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textarea.value).catch(() => {});
+          } else {
+            document.execCommand('copy');
+          }
+          const copyText = document.getElementById('copyText');
+          const copyIcon = document.getElementById('copyIcon');
+          if (copyText) copyText.textContent = 'Copied! ✓';
+          if (copyIcon) copyIcon.textContent = '✅';
+          sound.playTone(700, 'sine', 0.1, 0.1);
+          setTimeout(() => {
+            if (copyText) copyText.textContent = 'Copy Text';
+            if (copyIcon) copyIcon.textContent = '📋';
+          }, 2000);
+        }
+      });
+    }
 
     document.getElementById('closeSettingsModal').addEventListener('click', () => {
       document.getElementById('settingsModal').style.display = 'none';

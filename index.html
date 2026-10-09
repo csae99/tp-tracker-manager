@@ -45,6 +45,10 @@
           <span class="icon">🏆</span>
           <span class="btn-text">Scores</span>
         </button>
+        <button id="btnSettleUp" class="btn btn-secondary btn-icon btn-settle-highlight" title="Settle Up & WhatsApp Summary">
+          <span class="icon">🤝</span>
+          <span class="btn-text">Settle Up</span>
+        </button>
         <button id="btnSettings" class="btn btn-secondary btn-icon" title="Table Settings">
           <span class="icon">⚙️</span>
           <span class="btn-text">Settings</span>
@@ -246,6 +250,9 @@
           <p class="modal-desc">
             Start a fresh game session from scratch? All player bankrolls will be reset back to the starting amount (100 chips each), the hand counter will reset to <strong>Hand #1</strong>, and previous hand logs will be cleared.
           </p>
+          <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; font-size: 0.82rem; color: #86efac;">
+            💡 <strong>Tip:</strong> Need to calculate who owes whom before resetting? <a href="javascript:void(0)" id="linkSettleBeforeReset" style="color: #4ade80; text-decoration: underline; font-weight: 700;">Open Settle Up & WhatsApp Summary ➔</a>
+          </div>
           <div class="form-group" style="margin-bottom: 1rem;">
             <label for="resetStartingChips">Starting Bankroll Per Player:</label>
             <input type="number" id="resetStartingChips" min="10" max="10000" step="10" value="100">
@@ -573,6 +580,7 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnSettleUpFromLeaderboard">🤝 Settle Up & WhatsApp</button>
           <button class="btn btn-primary" id="btnCloseLeaderboardBtn">Close</button>
         </div>
       </div>
@@ -627,6 +635,77 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" id="btnCancelSettings">Cancel</button>
           <button class="btn btn-primary" id="btnSaveSettings">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settle Up & WhatsApp Summary Modal -->
+    <div class="modal-backdrop" id="settleModal" style="display: none;">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <h3>🤝 Session Settle Up & WhatsApp Summary</h3>
+          <button class="modal-close" id="closeSettleModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Active Pot Alert if hand is in progress -->
+          <div id="settlePotAlert" style="display: none;"></div>
+
+          <!-- Quick Session Stats Cards -->
+          <div class="settle-stats-grid" id="settleStatsGrid">
+            <!-- Injected via JS -->
+          </div>
+
+          <!-- Minimal Debt Settlement Transfers (Who pays Whom) -->
+          <div class="settle-block">
+            <div class="settle-block-header">
+              <span class="settle-block-title">💸 Settle Up (Who Pays Whom)</span>
+              <span class="settle-block-subtitle">Minimal transfers to clear all player debts</span>
+            </div>
+            <div class="settle-tx-container" id="settleTxContainer">
+              <!-- Injected via JS -->
+            </div>
+          </div>
+
+          <!-- Final P&L Breakdown Table -->
+          <div class="settle-block">
+            <div class="settle-block-header">
+              <span class="settle-block-title">📊 Final Balances & P&L</span>
+            </div>
+            <div class="leaderboard-table-wrap">
+              <table class="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Total Bankroll</th>
+                    <th>Current Chips</th>
+                    <th>Net P&L</th>
+                    <th>Hands Won</th>
+                  </tr>
+                </thead>
+                <tbody id="settleBalancesBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- WhatsApp Message Preview -->
+          <div class="settle-block">
+            <div class="settle-block-header">
+              <span class="settle-block-title">💬 WhatsApp Message Preview</span>
+              <span class="settle-block-subtitle">Ready to paste or share directly into WhatsApp</span>
+            </div>
+            <textarea class="settle-whatsapp-preview" id="settleWhatsappText" readonly rows="8"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCloseSettleModalBtn">Close</button>
+          <button class="btn btn-secondary" id="btnCopyWhatsappSummary">
+            <span id="copyIcon">📋</span> <span id="copyText">Copy Text</span>
+          </button>
+          <a class="btn btn-primary btn-whatsapp" id="btnShareWhatsapp" target="_blank" rel="noopener noreferrer">
+            <span>📲 Share on WhatsApp</span>
+          </a>
         </div>
       </div>
     </div>
