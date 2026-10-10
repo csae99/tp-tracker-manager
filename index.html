@@ -253,13 +253,25 @@
           <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; font-size: 0.82rem; color: #86efac;">
             💡 <strong>Tip:</strong> Need to calculate who owes whom before resetting? <a href="javascript:void(0)" id="linkSettleBeforeReset" style="color: #4ade80; text-decoration: underline; font-weight: 700;">Open Settle Up & WhatsApp Summary ➔</a>
           </div>
-          <div class="form-group" style="margin-bottom: 1rem;">
-            <label for="resetStartingChips">Starting Bankroll Per Player:</label>
-            <input type="number" id="resetStartingChips" min="10" max="10000" step="10" value="100">
+          <div class="form-row" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="resetNumPlayers">Number of Players:</label>
+              <input type="number" id="resetNumPlayers" min="2" max="12" value="4">
+            </div>
+            <div class="form-group">
+              <label for="resetStartingChips">Default Buy-in / Bankroll:</label>
+              <input type="number" id="resetStartingChips" min="10" max="10000" step="10" value="100">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="resetNumPlayers">Number of Players:</label>
-            <input type="number" id="resetNumPlayers" min="2" max="12" value="4">
+
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <label>Starting Bankrolls per Player:</label>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnSyncDefaultChipsToAll" title="Set all players to default bankroll">Set All to Default</button>
+            </div>
+            <div class="reset-player-chips-list" id="resetPlayerChipsList">
+              <!-- Dynamically populated via JS with custom chips input per player -->
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -603,7 +615,7 @@
           </div>
 
           <div class="form-group">
-            <label>Player Names:</label>
+            <label>Players, Bankrolls & Status:</label>
             <div class="player-names-list" id="cfgPlayerNamesList">
               <!-- Dynamically generated name inputs -->
             </div>

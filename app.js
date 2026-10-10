@@ -2112,13 +2112,18 @@
       for (let i = 0; i < count; i++) {
         const curPlayer = state.players[i];
         const curName = curPlayer ? curPlayer.name : `Player ${i + 1}`;
+        const curChips = curPlayer ? curPlayer.chips : (parseInt(inputChips.value, 10) || 100);
         const isSitting = curPlayer ? Boolean(curPlayer.isSittingOut) : false;
         const div = document.createElement('div');
         div.className = 'cfg-player-row';
         div.innerHTML = `
-          <input type="text" id="cfgPlayerName_${i}" value="${escapeHtml(curName)}" placeholder="Player ${i + 1}" maxlength="16">
+          <input type="text" id="cfgPlayerName_${i}" class="cfg-player-name-inp" value="${escapeHtml(curName)}" placeholder="Player ${i + 1}" maxlength="16">
+          <div class="player-chips-input-wrap" title="Player Bankroll">
+            <span class="chips-input-symbol">🪙</span>
+            <input type="number" id="cfgPlayerChips_${i}" class="cfg-player-chips-inp" value="${curChips}" min="0" step="10" title="Player Bankroll">
+          </div>
           <button type="button" class="btn-cfg-sit ${isSitting ? 'btn-cfg-sit-in' : 'btn-cfg-sit-out'}" data-index="${i}" title="${isSitting ? 'Sit In (Play hands)' : 'Sit Out (Take break / skip hands)'}">
-            ${isSitting ? '▶ Sit In' : '⏸ Sit Out'}
+            ${isSitting ? '▶ In' : '⏸ Out'}
           </button>
         `;
         namesList.appendChild(div);
@@ -2191,11 +2196,26 @@
         }
       }
 
-      // Update names
+      // Update names and custom bankrolls
       for (let i = 0; i < newCount; i++) {
         const nameInp = document.getElementById(`cfgPlayerName_${i}`);
         if (nameInp && nameInp.value.trim()) {
           state.players[i].name = nameInp.value.trim();
+        }
+
+        const chipsInp = document.getElementById(`cfgPlayerChips_${i}`);
+        if (chipsInp) {
+          const newBankroll = Math.max(0, parseInt(chipsInp.value, 10) || 0);
+          if (newBankroll !== state.players[i].chips) {
+            const diff = newBankroll - state.players[i].chips;
+            state.players[i].chips = newBankroll;
+            if (!state.isHandActive && state.handNumber === 1 && state.actionHistory.length === 0) {
+              state.players[i].initialChips = newBankroll;
+            } else {
+              state.players[i].initialChips = Math.max(0, (state.players[i].initialChips || 0) + diff);
+            }
+            logAction(`💰 ${state.players[i].name} bankroll adjusted to ${newBankroll} chips`, 'boot-entry');
+          }
         }
       }
 
@@ -2220,32 +2240,98 @@
     const modal = document.getElementById('resetModal');
     const inputChips = document.getElementById('resetStartingChips');
     const inputPlayers = document.getElementById('resetNumPlayers');
+    const chipsList = document.getElementById('resetPlayerChipsList');
+    const btnSyncDefault = document.getElementById('btnSyncDefaultChipsToAll');
 
     inputChips.value = state.config.initialChips || 100;
     inputPlayers.value = state.config.numPlayers || 4;
 
+    function renderResetPlayerRows(count) {
+      if (!chipsList) return;
+      chipsList.innerHTML = '';
+      const defaultBuyin = Math.max(10, parseInt(inputChips.value, 10) || 100);
+      for (let i = 0; i < count; i++) {
+        const curPlayer = state.players[i];
+        const curName = curPlayer ? curPlayer.name : `Player ${i + 1}`;
+        const curColor = curPlayer ? curPlayer.color : PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const curChips = curPlayer ? (curPlayer.initialChips || defaultBuyin) : defaultBuyin;
+
+        const row = document.createElement('div');
+        row.className = 'reset-player-chip-row';
+        row.innerHTML = `
+          <span class="reset-player-tag">
+            <span class="reset-player-dot" style="background: ${curColor};"></span>
+            ${escapeHtml(curName)}
+          </span>
+          <div class="player-chips-input-wrap">
+            <span class="chips-input-symbol">🪙</span>
+            <input type="number" id="resetPlayerChips_${i}" class="reset-player-chips-inp" value="${curChips}" min="10" step="10" title="Starting Chips">
+          </div>
+        `;
+        chipsList.appendChild(row);
+      }
+    }
+
+    renderResetPlayerRows(parseInt(inputPlayers.value, 10) || 4);
+
+    inputPlayers.oninput = () => {
+      const count = Math.min(12, Math.max(2, parseInt(inputPlayers.value, 10) || 4));
+      renderResetPlayerRows(count);
+    };
+
+    if (btnSyncDefault) {
+      btnSyncDefault.onclick = () => {
+        const def = Math.max(10, parseInt(inputChips.value, 10) || 100);
+        const count = Math.min(12, Math.max(2, parseInt(inputPlayers.value, 10) || 4));
+        for (let i = 0; i < count; i++) {
+          const inp = document.getElementById(`resetPlayerChips_${i}`);
+          if (inp) inp.value = def;
+        }
+      };
+    }
+
+    inputChips.oninput = () => {
+      const def = Math.max(10, parseInt(inputChips.value, 10) || 100);
+      const count = Math.min(12, Math.max(2, parseInt(inputPlayers.value, 10) || 4));
+      for (let i = 0; i < count; i++) {
+        const inp = document.getElementById(`resetPlayerChips_${i}`);
+        if (inp) inp.value = def;
+      }
+    };
+
     document.getElementById('btnConfirmReset').onclick = () => {
-      const startingChips = Math.max(10, parseInt(inputChips.value, 10) || 100);
+      const defaultStarting = Math.max(10, parseInt(inputChips.value, 10) || 100);
       const numPlayers = Math.min(12, Math.max(2, parseInt(inputPlayers.value, 10) || 4));
 
-      resetEntireGame(startingChips, numPlayers);
+      const customChipsList = [];
+      for (let i = 0; i < numPlayers; i++) {
+        const inp = document.getElementById(`resetPlayerChips_${i}`);
+        const val = inp ? Math.max(10, parseInt(inp.value, 10) || defaultStarting) : defaultStarting;
+        customChipsList.push(val);
+      }
+
+      resetEntireGame(customChipsList, numPlayers, defaultStarting);
       modal.style.display = 'none';
     };
 
     modal.style.display = 'flex';
   }
 
-  function resetEntireGame(startingChips = 100, numPlayers = 4) {
+  function resetEntireGame(startingChips = 100, numPlayers = 4, defaultStarting = 100) {
     localStorage.removeItem(STORAGE_KEY);
-    state.config.initialChips = startingChips;
+    const baseDefault = typeof startingChips === 'number' ? startingChips : defaultStarting;
+    state.config.initialChips = baseDefault;
     state.config.numPlayers = numPlayers;
     state.config.bootAmount = 5;
     state.config.maxRounds = 3;
 
     initializeDefaultPlayers(numPlayers);
-    state.players.forEach(p => {
-      p.chips = startingChips;
-      p.initialChips = startingChips;
+    state.players.forEach((p, idx) => {
+      const initial = Array.isArray(startingChips) 
+        ? (startingChips[idx] || baseDefault) 
+        : startingChips;
+      p.chips = initial;
+      p.initialChips = initial;
       p.handsWon = 0;
       p.isBlind = true;
       p.isFolded = false;
@@ -2261,7 +2347,11 @@
     state.undoStack = [];
     state.pendingRoundPlayerIds = [];
 
-    logAction(`Game reset to factory start (${numPlayers} players with ${startingChips} chips each).`, 'win-entry');
+    const customSummary = Array.isArray(startingChips) 
+      ? state.players.map(p => `${p.name}: ${p.chips}`).join(', ')
+      : `${numPlayers} players with ${startingChips} chips each`;
+
+    logAction(`Game reset to factory start (${customSummary}).`, 'win-entry');
     startNewHand();
   }
 
